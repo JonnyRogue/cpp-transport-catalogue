@@ -11,7 +11,7 @@ std::pair<transport_catalogue::Stop, bool> ParseStopsAndCoord(const std::string&
 
 transport_catalogue::Bus ParseRouteForBus(std::string_view input_info);
 
-void InputAndOutputInformation(std::istream& input_info);
+void InputAndOutputInformation(std::istream& input);
 
 } //namespace input
 } //namespace detail
