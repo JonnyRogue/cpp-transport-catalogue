@@ -4,107 +4,146 @@
 namespace transport_catalogue {
 namespace detail {
 namespace input {
+    
+std::string ReadLine(std::istream& input) {
+    std::string str;
+	std::getline(input, str);
+    return str;
+}
 
-using namespace std::literals;
-using namespace transport_catalogue::detail::output;
-
-std::vector<std::pair<std::string_view, int>> ParseDistancesToStops(std::string_view input_info) {
-    std::vector<std::pair<std::string_view, int>> result;
-    size_t start = input_info.find(',');
-    start = input_info.find(',', start + 1) + (" "sv).size();
-    size_t end = start;
-    while (start != std::string_view::npos) {
-        end = input_info.find("m"sv, start);
-        int distance = std::stoi(std::string(input_info.substr(start, end - start)));
-        start = end + ("m to "sv).size();
-        end = input_info.find(","sv, start);
-        std::string_view stop_to = input_info.substr(start, end - start);
-        result.emplace_back(stop_to, distance);
-        start = (end == std::string_view::npos)  ?  end  :  end + (" "sv).size();
+std::vector<std::string> ReadInputData(std::istream& input) {
+    std::string str;
+	size_t number_requaests = std::stoi(ReadLine(input));
+    std::vector<std::string> queries;
+	queries.reserve(number_requaests);
+    for (size_t count = 1; count <= number_requaests; ++count) {
+        std::string line = std::move(ReadLine(input));
+        line = line.substr(line.find_first_not_of(' '));
+        queries.push_back(std::move(line));
     }
-    return result;
+    return queries;
 }
 
-std::pair<transport_catalogue::Stop, bool> ParseStopsAndCoord(const std::string& input_info) {
-    transport_catalogue::Stop stop;
-    size_t stop_begin = ("Stop "s).size();
-    size_t stop_end = input_info.find(": "s, stop_begin);
-    stop.name = input_info.substr(stop_begin, stop_end - stop_begin);
-    size_t lat_begin = stop_end + (": "s).size();
-    size_t lat_end = input_info.find(","s, lat_begin);
-    stop.coord.lat = std::stod(input_info.substr(lat_begin, lat_end - lat_begin));
-    size_t lng_begin = lat_end + (", "s).size();
-    size_t lng_end = input_info.find(","s, lng_begin);
-    stop.coord.lng = std::stod(input_info.substr(lng_begin, lng_end - lng_begin));
-    bool has_stops_info = lng_end != std::string_view::npos;
-    return {std::move(stop), has_stops_info};
+std::pair<std::string_view, std::string_view> SplitFunc(std::string_view line, char sign) {
+	size_t pos = line.find(sign);
+	std::string_view left = line.substr(0, pos);
+	left = left.substr(0, left.find_last_not_of(' ') + 1);
+    if (pos < line.size() && pos + 1 < line.size()) {
+        size_t begin = line.find_first_not_of(' ', pos + 1);
+		size_t end = line.find_last_not_of(' ') + 1;
+		std::string_view right = line.substr(begin, end - begin);
+		return {left, right};
+	} else {
+          return {left, std::string_view()};
+	  }
+}
+    
+std::pair<std::vector<Stop>, std::unordered_map<std::string, std::string>> SplitQuery(
+	const StringVec& queries) {
+	std::pair<std::vector<Stop>, std::unordered_map<std::string, std::string>> info;
+	info.first.reserve(queries.size());
+	Stop stop;
+    for (const std::string& query : queries) {
+        if (query[0] == 'S') {
+			std::string query_stop = query.substr(4); 
+			auto [name, data] = std::move(SplitFunc(query_stop, ':'));
+			stop.name = std::string(name.substr(name.find_first_not_of(' ')));
+			auto [lat, data1] = std::move(SplitFunc(data, ','));
+            stop.coord.lat = std::stod(std::string(lat));
+			auto [lng, data2] = std::move(SplitFunc(data1, ','));
+			stop.coord.lng = std::stod(std::string(lng));
+            info.first.push_back(stop);
+			if (!data2.empty()) {
+                info.second[stop.name] = std::move(std::string(data2));
+			}
+		}
+	}
+	return info;
 }
 
-transport_catalogue::Bus ParseRouteForBus(std::string_view input_info) {
-    transport_catalogue::Bus bus_;
-    size_t bus_start = input_info.find(' ') + (" "sv).size();
-    size_t bus_end = input_info.find(": "sv, bus_start);
-    bus_.name_bus = input_info.substr(bus_start, bus_end - bus_start);
-    bus_.type = (input_info[input_info.find_first_of("->")] == '>') ? transport_catalogue::RouteType::CIRCLE :transport_catalogue::RouteType::TWO_DIRECTIONAL;
-    std::string_view stop_type = (bus_.type == transport_catalogue::RouteType::CIRCLE) ? " > "sv : " - "sv;
-    size_t stop_begin = bus_end + (": "sv).size();
-    while (stop_begin <= input_info.length()) {
-        size_t stop_end = input_info.find(stop_type, stop_begin);
-        bus_.stop_names.push_back(input_info.substr(stop_begin, stop_end - stop_begin));
-        stop_begin = (stop_end == std::string_view::npos) ? stop_end : stop_end + stop_type.size();
-    }
-    bus_.unique_stops = {bus_.stop_names.begin(), bus_.stop_names.end()};
-    return bus_;
+Bus ParseRoute(const TransportCatalogue& catalogue, std::string_view route, char sign) {
+    auto [name, stops] = std::move(SplitFunc(route, ':'));
+    name = name.substr(name.find_first_not_of(' '));
+	DeqStop stops_ = SplitStopsInRoute(catalogue, stops, sign);
+    if (sign == '-') {
+        DeqStop copy = stops_;
+		std::move(std::next(copy.rbegin()), copy.rend(), std::back_inserter(stops_));
+	}
+    RouteType type = (sign == '>') ? RouteType::CIRCLE : RouteType::TWO_DIRECTIONAL;
+    return {type, std::string(name), stops_};
 }
 
-void InputAndOutputInformation(std::istream& input) {
-    TransportCatalogue catalogue;
-    int queries = 0;
-    input >> queries;
-    input.get();
-    std::vector<std::string> bus_queries;
-    bus_queries.reserve(queries);
-    std::vector<std::pair<std::string, std::string>> stop_distances;
-    stop_distances.reserve(queries);
-    std::string query;
-    for (int id = 0; id < queries; ++id) {
-        std::getline(input, query);
-        if (query.substr(0, 4) == "Stop"s) {
-            auto [stop, query_] = ParseStopsAndCoord(query);
-            if (query_) {
-                stop_distances.emplace_back(stop.name, std::move(query));
-            }
-            catalogue.AddStop(std::move(stop));
-        } else if (query.substr(0, 3) == "Bus"s) {
-            bus_queries.emplace_back(std::move(query));
+std::unordered_map<std::string, size_t> ParseLine(std::string_view line) {
+    if (line.empty()) {
+		return {};
+	}
+	std::unordered_map<std::string, size_t> info;
+	std::pair<std::string_view, std::string_view> str_v;
+	str_v.second = line;
+    while (str_v.second.find(',') != std::string_view::npos) {
+		str_v = SplitFunc(str_v.second, ',');
+		auto [distance, stop] = SplitFunc(str_v.first, 'm');
+		info[std::string(stop.substr(3))] = std::stoi(std::string(distance));
+	}
+	auto [distance, stop] = SplitFunc(str_v.second, 'm');
+	info[std::string(stop.substr(3))] = std::stoi(std::string(distance));
+    return info;
+}
+
+DeqStop SplitStopsInRoute(const TransportCatalogue& catalogue, std::string_view& stops, char sign) {
+	DeqStop stops_;
+	const Stop* stop_ = nullptr;
+    std::string_view line_stops = stops;
+    size_t number = std::count(stops.begin(), stops.end(), sign);
+    for (size_t count = 1; count <= number; ++count) {
+        auto [name, line] = SplitFunc(line_stops, sign);
+        stop_ = catalogue.FindStop(name);
+		stops_.push_back(stop_);
+        line_stops = line;
+	}
+	stop_ = catalogue.FindStop(line_stops);
+	stops_.push_back(stop_);
+    return stops_;
+}
+
+Bus InfoRoute(const TransportCatalogue& catalogue, const std::string& query_bus) {
+    std::string route = query_bus.substr(3); 
+    if (route.find('-') != std::string::npos) {
+		return ParseRoute(catalogue, route, '-');
+	}
+	return ParseRoute(catalogue, route, '>');
+}
+   
+std::vector<Bus> SplitBuses(const TransportCatalogue& catalogue, const StringVec& queries) {
+    std::vector<Bus> buses;
+	buses.reserve(queries.size() / 2);
+    for (const std::string& query : queries) {
+        if (query[0] == 'B') {
+            buses.push_back(std::move(InfoRoute(catalogue, query)));
         }
-    }
-    for (const auto& [stop_from, query] : stop_distances) {
-        for (auto [stop_to, distance] : ParseDistancesToStops(query))
-            catalogue.AddDistance(stop_from, stop_to, distance);
-    }
-    for (const auto& bus_query : bus_queries) {
-        catalogue.AddBus(ParseRouteForBus(bus_query));
-    }
-    input >> queries;
-    input.get();
-    for (int id = 0; id < queries; ++id) {
-        std::getline(input, query);
-        if (query.substr(0, 3) == "Bus"s) {
-            std::string_view bus_number = ParseBusStatisticsRequest(query);
-            if (auto bus_statistics = catalogue.GetBusInfo(bus_number)) {
-                std::cout << *bus_statistics << std::endl;
-            } else {
-                std::cout << "Bus " << bus_number << ": not found" << std::endl;
-            }
-        } else if (query.substr(0, 4) == "Stop"s) {
-            std::string_view stop_name = ParseBusesPassingThroughStopRequest(query);
-            auto* buses = catalogue.GetBusesOnTheStop(stop_name);
-            PrintNotFoundBusesAndStops(std::cout, stop_name, buses);
-        }
-    }
+
+	}
+    return buses;
+}
+
+void InputInformation(TransportCatalogue& catalogue, std::istream& input) {
+    StringVec querie = std::move(ReadInputData(input));
+	auto [info_first, info_second] = SplitQuery(querie);
+	for (const Stop& stop : info_first) {
+        catalogue.AddStop(stop);
+	}
+    for (auto [stop_from, line] : info_second) {
+		std::unordered_map<std::string, size_t> stops = ParseLine(line);
+		for (const auto& [stop_to, distance] : stops) {
+			catalogue.SetDistance(stop_from, stop_to, distance);
+		}
+	}
+	std::vector<Bus> buses = std::move(SplitBuses(catalogue, querie));
+	for (const Bus& bus : buses) {
+		catalogue.AddBus(bus);
+	}
 }
 
 }//namespace input
 }//namespace detail
-}//namespace transport_catalogue 
+}//namespace transport_catalogue
