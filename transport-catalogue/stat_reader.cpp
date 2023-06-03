@@ -8,11 +8,11 @@ namespace output {
 void PrintBusInfo(std::ostream& output, const BusQueryInput& bus_info) {
     if(bus_info.bus_not_found_) {
         output << "Bus " << bus_info.number << ": "
-		       << bus_info.stops_count << " stops on route, "
-			   << bus_info.unique_stops_count << " unique stops, "
-               << std::setprecision(6)
-			   << bus_info.route_length << " route length, "
-			   << bus_info.curvature << " curvature" << std::endl;
+		         << bus_info.stops_count << " stops on route, "
+		         << bus_info.unique_stops_count << " unique stops, "
+                         << std::setprecision(6)
+			 << bus_info.route_length << " route length, "
+			 << bus_info.curvature << " curvature" << std::endl;
     } else {
          output << "Bus " << bus_info.number << ": not found" << std::endl;
       }
