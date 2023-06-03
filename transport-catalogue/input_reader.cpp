@@ -7,15 +7,15 @@ namespace input {
     
 std::string ReadLine(std::istream& input) {
     std::string str;
-	std::getline(input, str);
+    std::getline(input, str);
     return str;
 }
 
 std::vector<std::string> ReadInputData(std::istream& input) {
     std::string str;
-	size_t number_requaests = std::stoi(ReadLine(input));
+    size_t number_requaests = std::stoi(ReadLine(input));
     std::vector<std::string> queries;
-	queries.reserve(number_requaests);
+    queries.reserve(number_requaests);
     for (size_t count = 1; count <= number_requaests; ++count) {
         std::string line = std::move(ReadLine(input));
         line = line.substr(line.find_first_not_of(' '));
@@ -25,24 +25,24 @@ std::vector<std::string> ReadInputData(std::istream& input) {
 }
 
 std::pair<std::string_view, std::string_view> SplitFunc(std::string_view line, char sign) {
-	size_t pos = line.find(sign);
-	std::string_view left = line.substr(0, pos);
-	left = left.substr(0, left.find_last_not_of(' ') + 1);
+    size_t pos = line.find(sign);
+    std::string_view left = line.substr(0, pos);
+    left = left.substr(0, left.find_last_not_of(' ') + 1);
     if (pos < line.size() && pos + 1 < line.size()) {
         size_t begin = line.find_first_not_of(' ', pos + 1);
-		size_t end = line.find_last_not_of(' ') + 1;
-		std::string_view right = line.substr(begin, end - begin);
-		return {left, right};
-	} else {
+	size_t end = line.find_last_not_of(' ') + 1;
+	std::string_view right = line.substr(begin, end - begin);
+	return {left, right};
+    } else {
           return {left, std::string_view()};
-	  }
+      }
 }
     
 std::pair<std::vector<Stop>, std::unordered_map<std::string, std::string>> SplitQuery(
-	const StringVec& queries) {
-	std::pair<std::vector<Stop>, std::unordered_map<std::string, std::string>> info;
-	info.first.reserve(queries.size());
-	Stop stop;
+    const StringVec& queries) {
+    std::pair<std::vector<Stop>, std::unordered_map<std::string, std::string>> info;
+    info.first.reserve(queries.size());
+    Stop stop;
     for (const std::string& query : queries) {
         if (query[0] == 'S') {
 			std::string query_stop = query.substr(4); 
@@ -146,4 +146,4 @@ void InputInformation(TransportCatalogue& catalogue, std::istream& input) {
 
 }//namespace input
 }//namespace detail
-}//namespace transport_catalogue
+}//namespace transport_catalogue 
