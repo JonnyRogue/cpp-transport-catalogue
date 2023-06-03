@@ -1,96 +1,104 @@
 #include "transport_catalogue.h"
 
-
-
 namespace transport_catalogue {
 
-std::ostream& operator<<(std::ostream& output, const BusQueryInput& bus_info) {
-    output << "Bus " << bus_info.number << ": " << bus_info.stops_count << " stops on route, "
-    << bus_info.unique_stops_count << " unique stops, ";
-    output << bus_info.rout_length << " route length, ";
-    output << std::setprecision(6) << bus_info.curvature << " curvature";
-    return output;
+void TransportCatalogue::AddBus(const Bus& bus) {
+    buses.push_back(bus);
+	const Bus* bus_ = &buses[buses.size() - 1];
+	map_all_buses.insert({ bus_->name_bus, bus_ });
+    for (const Stop* stop_ : bus.stop_names) {
+		if (stop_to_bus_map.count(stop_)) {
+			stop_to_bus_map.at(stop_).insert(bus_-> name_bus);
+		} else {
+			stop_to_bus_map[stop_].insert(bus_-> name_bus);
+		}
+	}
 }
 
-size_t Bus::GetStopsCount() const {
-    return (type == RouteType::CIRCLE) ? stop_names.size() : 2 * stop_names.size() - 1;
+void TransportCatalogue::AddStop(const Stop& stop) {
+    stops.push_back(stop);
+	const Stop* stop_ = &stops[stops.size() - 1];
+	map_all_stops.insert({ stop_->name, stop_ });
+	if (!stop_to_bus_map.count(FindStop(stop.name))) {
+		stop_to_bus_map[stop_];
+	}
 }
 
-void TransportCatalogue::AddBus(Bus bus) {
-    for (auto& stop : bus.stop_names) {
-        stop = map_all_stops.find(stop)->first; 
+void TransportCatalogue::SetDistance(std::string_view stop_from, std::string_view stop_to, size_t distance) {
+    if (!map_distance_to_stop.count({FindStop(stop_from), FindStop(stop_to)})) {
+        map_distance_to_stop.insert({{FindStop(stop_from), FindStop(stop_to)}, distance});
     }
-    bus.unique_stops = {bus.stop_names.begin(), bus.stop_names.end()};
-    const auto position = buses.insert(buses.begin(), std::move(bus));
-    map_all_buses.insert({position->name_bus, &(*position)});
-    for (std::string_view stop : position->stop_names) {
-        stop_to_bus_map[stop].insert(position->name_bus);
-    }
 }
 
-void TransportCatalogue::AddStop(Stop stop) {
-    const auto position = stops.insert(stops.begin(), std::move(stop));
-    map_all_stops.insert({position->name, &(*position)});
-    stop_to_bus_map.insert({position->name, {}});
+size_t TransportCatalogue::GetDistance(std::string_view stop_from, std::string_view stop_to) const {
+	if (map_distance_to_stop.count({FindStop(stop_from), FindStop(stop_to)})) {
+		return map_distance_to_stop.at({FindStop(stop_from), FindStop(stop_to)});
+	}
+	return map_distance_to_stop.at({FindStop(stop_to), FindStop(stop_from)});
 }
-
-void TransportCatalogue::AddDistance(std::string_view stop_from, std::string_view stop_to, int distance) {
-    map_distance_to_stop.insert({{map_all_stops.at(stop_from), map_all_stops.at(stop_to)}, distance});
-}
-
-std::optional<BusQueryInput> TransportCatalogue::GetBusInfo(std::string_view bus_name) const {
-    if (map_all_buses.count(bus_name) == 0) {
-        return std::nullopt;
-    }
-    const Bus* bus_info = map_all_buses.at(bus_name);
+    
+BusQueryInput TransportCatalogue::GetBusInfo(std::string_view bus_name) const {
     BusQueryInput result;
-    result.number = bus_info->name_bus;
-    result.stops_count = bus_info->GetStopsCount();
-    result.unique_stops_count = bus_info->unique_stops.size();
-    result.rout_length = CalculateRouteLength(bus_info);
-    result.curvature = static_cast<double>(result.rout_length) / CalculateGeographicLength(bus_info);
+    if (map_all_buses.count(bus_name)) {
+    result.bus_not_found_ = true;
+    result.number = FindBus(bus_name)-> name_bus;
+    result.stops_count = map_all_buses.at(bus_name)->stop_names.size();
+    result.unique_stops_count = CalculateUniqueStops(bus_name);
+    result.route_length = CalculateRouteLength(bus_name);
+    result.curvature = (result.route_length) / CalculateGeographicLength(bus_name);
+    } else {
+        result.number = std::string(bus_name);
+    }
     return result;
 }
 
-int TransportCatalogue::CalculateRouteLength(const Bus* bus_info) const {
-    auto get_length = [this](std::string_view from, std::string_view to) {
-        auto key = std::make_pair(map_all_stops.at(from), map_all_stops.at(to));
-        return (map_distance_to_stop.count(key) > 0) ? map_distance_to_stop.at(key) : map_distance_to_stop.at({map_all_stops.at(to), map_all_stops.at(from)});
-    };
-    int one_way_route = std::transform_reduce(bus_info->stop_names.begin(), 
-                                              std::prev(bus_info->stop_names.end()),
-                                              std::next(bus_info->stop_names.begin()), 
-                                              0, 
-                                              std::plus<>(), 
-                                              get_length);
-    if (bus_info->type == RouteType::CIRCLE) {
-        return one_way_route;
+StopQueryInput TransportCatalogue::GetStopInfo(std::string_view stop_name) const {
+    if (stop_to_bus_map.count(FindStop(stop_name))) {
+		return { true, std::string(stop_name), stop_to_bus_map.at(FindStop(stop_name))};
+	}
+    return {false, std::string(stop_name), {}};
+}
+
+
+double TransportCatalogue::CalculateRouteLength(std::string_view bus_info) const {
+    double distance = 0;
+		auto from = FindBus(bus_info)->stop_names.begin();
+		for (auto to = std::next(from); to != FindBus(bus_info)->stop_names.end(); ++to) {
+			distance += GetDistance((*from)->name, (*to)->name);
+			from = to;
+		}
+		return distance;
+}
+
+double TransportCatalogue::CalculateGeographicLength(std::string_view bus_info) const {
+    double distance = 0;
+    geo::Coordinates from = { FindBus(bus_info)->stop_names[0]->coord.lat, FindBus(bus_info)->stop_names[0]->coord.lng };
+    for (size_t n = 1; n < FindBus(bus_info)->stop_names.size(); ++n) {
+        auto stop = FindBus(bus_info)->stop_names[n];
+		geo::Coordinates to {stop->coord.lat, stop->coord.lng};
+		distance += ComputeDistance(from, to);
+		from = to;
     }
-    int two_way_route = std::transform_reduce(bus_info->stop_names.rbegin(), 
-                                              std::prev(bus_info->stop_names.rend()), 
-                                              std::next(bus_info->stop_names.rbegin()), 
-                                              0, 
-                                              std::plus<>(), 
-                                              get_length);
-    return one_way_route + two_way_route;
+	return distance;
+}
+    
+size_t TransportCatalogue::CalculateUniqueStops(std::string_view bus) const {
+		std::unordered_set<const Stop* > unique_stops;
+        for (const Stop* stop : FindBus(bus)->stop_names) {
+			if (!unique_stops.count(stop)) {
+				unique_stops.insert(stop);
+			}
+		}
+        return unique_stops.size();
 }
 
-double TransportCatalogue::CalculateGeographicLength(const Bus* bus_info) const {
-    double geographic_length = std::transform_reduce (std::next(bus_info->stop_names.begin()),
-                                                      bus_info->stop_names.end(),
-                                                      bus_info->stop_names.begin(),
-                                                      0.0,
-                                                      std::plus<>(), [this](std::string_view from, std::string_view to) {
-                                                          return ComputeDistance(map_all_stops.at(from)->coord, map_all_stops.at(to)->coord);
-                                                      });
-
-    return (bus_info->type == RouteType::CIRCLE) ? geographic_length : geographic_length * 2.;
+const Stop* TransportCatalogue::FindStop(const std::string_view stop_name) const
+    {
+        return map_all_stops.count(stop_name) ? map_all_stops.at(stop_name) : nullptr;
+}
+    
+const Bus* TransportCatalogue::FindBus(const std::string_view bus_name) const {
+    return map_all_buses.count(bus_name) ? map_all_buses.at(bus_name) : nullptr;
 }
 
-const std::set<std::string_view>* TransportCatalogue::GetBusesOnTheStop(std::string_view stop_name) const {
-    if (const auto position = stop_to_bus_map.find(stop_name); position != stop_to_bus_map.end())
-        return &position->second;
-    return nullptr;
-}
-
-}  // namespace transport_catalogue;
+} // namespace transport_catalogue;
