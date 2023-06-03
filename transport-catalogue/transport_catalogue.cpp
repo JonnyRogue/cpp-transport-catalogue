@@ -25,9 +25,7 @@ void TransportCatalogue::AddStop(const Stop& stop) {
 }
 
 void TransportCatalogue::SetDistance(std::string_view stop_from, std::string_view stop_to, size_t distance) {
-    if (!map_distance_to_stop.count({FindStop(stop_from), FindStop(stop_to)})) {
         map_distance_to_stop.insert({{FindStop(stop_from), FindStop(stop_to)}, distance});
-    }
 }
 
 size_t TransportCatalogue::GetDistance(std::string_view stop_from, std::string_view stop_to) const {
