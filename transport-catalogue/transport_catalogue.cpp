@@ -8,9 +8,9 @@ void TransportCatalogue::AddBus(const Bus& bus) {
 	map_all_buses.insert({ bus_->name_bus, bus_ });
     for (const Stop* stop_ : bus.stop_names) {
 		if (stop_to_bus_map.count(stop_)) {
-			stop_to_bus_map.at(stop_).insert(bus_-> name_bus);
+			stop_to_bus_map.at(stop_).insert(bus_);
 		} else {
-			stop_to_bus_map[stop_].insert(bus_-> name_bus);
+			stop_to_bus_map[stop_].insert(bus_);
 		}
 	}
 }
@@ -81,18 +81,17 @@ double TransportCatalogue::CalculateGeographicLength(std::string_view bus_info) 
 }
     
 size_t TransportCatalogue::CalculateUniqueStops(std::string_view bus) const {
-		std::unordered_set<const Stop* > unique_stops;
-        for (const Stop* stop : FindBus(bus)->stop_names) {
-			if (!unique_stops.count(stop)) {
-				unique_stops.insert(stop);
-			}
+	std::unordered_set<const Stop* > unique_stops;
+    for (const Stop* stop : FindBus(bus)->stop_names) {
+		if (!unique_stops.count(stop)) {
+			unique_stops.insert(stop);
 		}
-        return unique_stops.size();
+	}
+    return unique_stops.size();
 }
 
-const Stop* TransportCatalogue::FindStop(const std::string_view stop_name) const
-    {
-        return map_all_stops.count(stop_name) ? map_all_stops.at(stop_name) : nullptr;
+const Stop* TransportCatalogue::FindStop(const std::string_view stop_name) const {
+    return map_all_stops.count(stop_name) ? map_all_stops.at(stop_name) : nullptr;
 }
     
 const Bus* TransportCatalogue::FindBus(const std::string_view bus_name) const {
