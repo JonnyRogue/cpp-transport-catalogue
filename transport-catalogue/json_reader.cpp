@@ -25,7 +25,7 @@ renderer::RenderSettings JSONReader::ReadJsonRenderSettings(const json::Node& se
 	}
 	std::map<std::string, json::Node> s = settings_json.AsMap();
 	renderer::RenderSettings settings;
-    settings.width = s.at("width").AsDouble();
+        settings.width = s.at("width").AsDouble();
 	settings.height = s.at("height").AsDouble();
 	settings.padding = s.at("padding").AsDouble();
 	settings.line_width = s.at("line_width").AsDouble();
@@ -44,22 +44,23 @@ renderer::RenderSettings JSONReader::ReadJsonRenderSettings(const json::Node& se
 
 svg::Color JSONReader::ReadUnderlayerColor(const std::map<std::string, json::Node>& s) const {
 	svg::Color underlayer_color;
-    if (s.at("underlayer_color").IsString()) {
-		underlayer_color = s.at("underlayer_color").AsString();
+    auto underlayer_col_ = s.at("underlayer_color");
+    if (underlayer_col_.IsString()) {
+		underlayer_color = underlayer_col_.AsString();
 	}
-	if (s.at("underlayer_color").IsArray()) {
-		if (s.at("underlayer_color").AsArray().size() == 3) {
+	if (underlayer_col_.IsArray()) { // не увидел где два раза IsArray ((
+		if (underlayer_col_.AsArray().size() == 3) {
 			underlayer_color = svg::Rgb{
-				uint8_t(s.at("underlayer_color").AsArray()[0].AsInt()),
-				uint8_t(s.at("underlayer_color").AsArray()[1].AsInt()),
-				uint8_t(s.at("underlayer_color").AsArray()[2].AsInt())
+				uint8_t(underlayer_col_.AsArray()[0].AsInt()),
+				uint8_t(underlayer_col_.AsArray()[1].AsInt()),
+				uint8_t(underlayer_col_.AsArray()[2].AsInt())
 			};
-		} else {
-		      underlayer_color = svg::Rgba{
-                  uint8_t(s.at("underlayer_color").AsArray()[0].AsInt()),
-				  uint8_t(s.at("underlayer_color").AsArray()[1].AsInt()),
-				  uint8_t(s.at("underlayer_color").AsArray()[2].AsInt()),
-				  s.at("underlayer_color").AsArray()[3].AsDouble()
+		} else if (underlayer_col_.AsArray().size() == 4) {
+              underlayer_color = svg::Rgba{
+                  uint8_t(underlayer_col_.AsArray()[0].AsInt()),
+				  uint8_t(underlayer_col_.AsArray()[1].AsInt()),
+				  uint8_t(underlayer_col_.AsArray()[2].AsInt()),
+				  underlayer_col_.AsArray()[3].AsDouble()
 			  };
 		  }
 	}
@@ -68,25 +69,23 @@ svg::Color JSONReader::ReadUnderlayerColor(const std::map<std::string, json::Nod
 
 std::vector<svg::Color> JSONReader::ReadColorPalette(const std::map<std::string, json::Node>& s) const {
 	std::vector<svg::Color> color_palette;
-	if (s.at("color_palette").AsArray().empty()) {
+    auto color_pal_ = s.at("color_palette").AsArray();
+	if (color_pal_.empty()) {
 		color_palette.push_back("none");
 	} else {
-	      for (const auto& color : s.at("color_palette").AsArray()) {
+	      for (const auto& color : color_pal_) {
 		      if (color.IsString()) {
                   color_palette.push_back(color.AsString());
 			  } else if (color.IsArray() && color.AsArray().size() == 3) {
-                    uint8_t r, g, b;
-					r = color.AsArray()[0].AsInt();
-					g = color.AsArray()[1].AsInt();
-					b = color.AsArray()[2].AsInt();
+					uint8_t r = color.AsArray()[0].AsInt();
+					uint8_t g = color.AsArray()[1].AsInt();
+					uint8_t b = color.AsArray()[2].AsInt();
 					color_palette.push_back(svg::Rgb{ r, g, b });
 				} else {
-                      uint8_t r, g, b;
-					  double o;
-					  r = color.AsArray()[0].AsInt();
-					  g = color.AsArray()[1].AsInt();
-					  b = color.AsArray()[2].AsInt();
-					  o = color.AsArray()[3].AsDouble();
+				      uint8_t r = color.AsArray()[0].AsInt();
+					  uint8_t g = color.AsArray()[1].AsInt();
+					  uint8_t b = color.AsArray()[2].AsInt();
+					  double o = color.AsArray()[3].AsDouble();
 					  color_palette.push_back(svg::Rgba{ r, g, b, o });
 				  }
           }
@@ -114,7 +113,11 @@ void JSONReader::BuildDataBase() {
 }
 
 void JSONReader::AddNameAndCoordinatesOfStop(const json::Node& node) {
-    catalogue_.AddStop({node.AsMap().at("name").AsString(), node.AsMap().at("latitude").AsDouble(), node.AsMap().at("longitude").AsDouble()});
+    catalogue_.AddStop({
+        node.AsMap().at("name").AsString(), 
+        node.AsMap().at("latitude").AsDouble(), 
+        node.AsMap().at("longitude").AsDouble()
+    });
 }
 
 void JSONReader::AddDistanceBetweenStops(const json::Node& stop_from) {
@@ -169,7 +172,7 @@ std::map<std::string, json::Node> JSONReader::GenerateAnswerAboutRoute(const jso
 std::map<std::string, json::Node> JSONReader::GenerateAnswerAboutStop(const json::Node& request) const {
 	std::map<std::string, json::Node> stop_info;
 	std::string_view stop_name = request.AsMap().at("name").AsString();
-    stop_info.insert({ "request_id", request.AsMap().at("id").AsInt() });
+    	stop_info.insert({ "request_id", request.AsMap().at("id").AsInt() });
 	if (catalogue_.FindStop(stop_name)) {
 		std::vector<json::Node> buses;
 		for (const auto& bus : request_handler_.GetBusesByStop(stop_name)) {
