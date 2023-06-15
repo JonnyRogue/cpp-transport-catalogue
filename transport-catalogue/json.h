@@ -50,15 +50,13 @@ public:
     using runtime_error::runtime_error;
 };
 
-class Node {
+class Node final
+        : private std::variant<std::nullptr_t, Array, Dict, bool, int, double, std::string> { // достаточно ли этого? или вы имели ввиду что-то другое?
 public:
-    using Value = std::variant<std::nullptr_t, Array, Dict, bool, int, double, std::string>;
-    Node() = default;
+    using variant::variant;
+    using Value = variant;
     Node(Value value);
-    
-    template <typename Variable>
-    Node(Variable variable);
-
+            
     int AsInt() const;
     bool AsBool() const;
     double AsDouble() const;
@@ -77,8 +75,6 @@ public:
     bool operator==(const Node& other) const;
     bool operator!=(const Node& other) const;
 
-private:
-    Value value_ = nullptr;
 };
 
 std::ostream& operator<<(std::ostream& out, const Node& node);
@@ -98,11 +94,7 @@ private:
 Document Load(std::istream& input);
 
 void Print(const Document& doc, std::ostream& output);
-
-template <typename Variable>
-Node::Node(Variable variable) {
-    value_ = variable;
-}
+    
  
 }// end namespace json
 }// end namespace transport_catalogue
