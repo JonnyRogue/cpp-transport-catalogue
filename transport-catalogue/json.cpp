@@ -1,34 +1,26 @@
 #include "json.h"
  
 using namespace std;
+using namespace std::literals;
  
 namespace transport_catalogue {
 namespace json {
  
 namespace {
 using namespace std::literals;
-using Number = std::variant<int, double>;
 
 Node LoadNode(istream& input);
 
-std::nullptr_t LoadNull(std::istream& input) {
-    auto it = std::istreambuf_iterator<char>(input);
-    auto end = std::istreambuf_iterator<char>();
-    std::string str;
-    while (true) {
-        if (str == "ull") {
-            break;
-        }
-        if (it == end) {
-            throw ParsingError("String parsing error");
-        }
-        str += *it;
-        ++it;
+Node LoadNull(std::istream& input) {
+    const string null = "null";
+    for (size_t i = 0; i < null.size(); i++) {
+        if (null.at(i) == input.get()) continue;
+        else throw ParsingError("Failed to parse null");
     }
-    return std::nullptr_t{};
+    return {};
 }
 
-Number LoadNumber(std::istream& input) {
+Node LoadNumber(std::istream& input) {
     std::string parsed_num;
     auto read_char = [&parsed_num, &input] {
         parsed_num += static_cast<char>(input.get());
@@ -81,27 +73,17 @@ Number LoadNumber(std::istream& input) {
     }
 }
 
-bool LoadBool(std::istream& input) {
-    auto it = std::istreambuf_iterator<char>(input);
-    auto end = std::istreambuf_iterator<char>();
-    std::string str;
-    bool result;
-    while (true) {
-        if (str == "rue") {
-            result = true;
-            break;
-        }
-        if (str == "alse") {
-            result = false;
-            break;
-        }
-        if (it == end) {
-            throw ParsingError("String parsing error");
-        }
-        str += *it;
-        ++it;
+Node LoadBool(std::istream& input) {
+const string false_ = "false";
+    const string true_ = "true";
+    char a = input.get();
+    bool value = (a == 't');
+    std::string const* name = value ? &true_ : &false_;
+    for (size_t i = 1; i < name->size(); i++) {
+        if (name->at(i) == input.get()) continue;
+        else throw ParsingError("Failed to parse bool");
     }
-    return result;
+    return Node(value);
 }
 
 std::string LoadString(std::istream& input) {
@@ -194,129 +176,120 @@ Node LoadDict(istream& input) {
 
 Node LoadNode(istream& input) {
     char c;
-    input >> c;
-    while (c == ' ' || c == '\n' || c == '\t' || c == '\r') {
-        input >> c;
+    if (!(input >> c)) {
+        throw ParsingError("Failed to parse document"s);
     }
-    if (c == '[') {
+    if (c == 'n') {
+        input.putback(c);
+        return LoadNull(input);
+    }
+    else if (c == '"') {
+        return LoadString(input);
+    }
+    else if (c == 't' || c == 'f') {
+        input.putback(c);
+        return LoadBool(input);
+    }
+    else if (c == '[') {
         return LoadArray(input);
-    } else if (c == '{') {
-          return LoadDict(input);
-      } else if (c == '"') {
-            return Node{ LoadString(input) };
-        } else if (c == 'n') {
-              return Node{ LoadNull(input) };
-          } else if (c == 't' || c == 'f') {
-                return Node{ LoadBool(input) };
-            } else {
-                  input.putback(c);
-                  auto number = LoadNumber(input);
-                  if (holds_alternative<int>(number)) {
-                      return Node{ std::get<int>(number) };
-                  }
-                  if (holds_alternative<double>(number)) {
-                      return Node{ std::get<double>(number) };
-                  }
-              }
-    return Node{};
+    }
+    else if (c == '{') {
+        return LoadDict(input);
+    }
+    else {
+        input.putback(c);
+        return LoadNumber(input);
+    }
 }
 
 }  //namespace
 
-Node::Node(Value value) : value_(value) {}
+Node::Node(Value value) : std::variant<std::nullptr_t, Array, Dict, bool, int, double, std::string>(value) {}
 
 int Node::AsInt() const {
-    if (holds_alternative<int>(value_)) {
-        return std::get<int>(value_);
-    } else {
-          throw std::logic_error("");
-      }
+    if (!IsInt()) {
+        throw std::logic_error(""s);
+    }
+    return std::get<int>(*this);
 }
 
 bool Node::AsBool() const {
-    if (holds_alternative<bool>(value_)) {
-        return std::get<bool>(value_);
-    } else {
-          throw std::logic_error("");
-      }
+    if (!IsBool()) {
+        throw std::logic_error(""s);
+    }
+    return std::get<bool>(*this);
 }
    
 double Node::AsDouble() const {
-    if (holds_alternative<int>(value_)) {
-        return static_cast<double>(std::get<int>(value_));
-    } else if (holds_alternative<double>(value_)) {
-          return std::get<double>(value_);
-      } else {
-            throw std::logic_error("");
-        }
+    if (!IsDouble()) {
+        throw std::logic_error(""s);
+    }
+    return IsPureDouble() ? std::get<double>(*this) : AsInt();
 }
 
 const std::string& Node::AsString() const {
-    if (holds_alternative<std::string>(value_)) {
-        return std::get<std::string>(value_);
-    } else {
-          throw std::logic_error("");
-      }
+    if (!IsString()) {
+        throw std::logic_error(""s);
+    }
+    return std::get<std::string>(*this);
 }
 
 const Array& Node::AsArray() const {
-    if (holds_alternative<Array>(value_)) {
-        return std::get<Array>(value_);
-    } else {
-          throw std::logic_error("");
-      }
-}
+    if (!IsArray()) {
+        throw std::logic_error("Not an array"s);
+    }
+    return std::get<Array>(*this);
+}   
     
 const Dict& Node::AsMap() const {
-    if (holds_alternative<Dict>(value_)) {
-        return std::get<Dict>(value_);
-    } else {
-          throw std::logic_error("");
-      }
+    if (!IsMap()) {
+        throw std::logic_error("Not a dict"s);
+    }
+    return std::get<Dict>(*this);
 }
 
 bool Node::IsInt() const {
-    return holds_alternative<int>(value_);
-}
-
-bool Node::IsDouble() const {
-    return holds_alternative<double>(value_) || holds_alternative<int>(value_);
+    return holds_alternative<int>(*this);
 }
 
 bool Node::IsPureDouble() const {
-    return holds_alternative<double>(value_);
+    return holds_alternative<double>(*this);
+}
+
+bool Node::IsDouble() const {
+    return IsInt() || IsPureDouble();
 }
     
 bool Node::IsBool() const {
-    return holds_alternative<bool>(value_);
+    return holds_alternative<bool>(*this);
 }
    
 bool Node::IsString() const {
-    return holds_alternative<std::string>(value_);
+    return holds_alternative<std::string>(*this);
 }
    
 bool Node::IsNull() const {
-    return holds_alternative<std::nullptr_t>(value_);
+    return holds_alternative<std::nullptr_t>(*this);
 }
     
 bool Node::IsArray() const {
-    return holds_alternative<Array>(value_);
+    return holds_alternative<Array>(*this);
 }
     
 bool Node::IsMap() const {
-    return holds_alternative<Dict>(value_);
+    return holds_alternative<Dict>(*this);
 }
 
 const Node::Value& Node::GetValue() const {
-    return value_;
+    return *this;
 }
 
 bool Node::operator==(const Node& other) const {
-    return this->value_ == other.value_;
+    return GetValue() == other.GetValue();
 }
     
 bool Node::operator!=(const Node& other) const {
-    return !(this->value_ == other.value_);
+    return !(GetValue() == other.GetValue());
 }
 
 bool Document::operator==(const Document& other) const {
