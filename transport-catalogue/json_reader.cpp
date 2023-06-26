@@ -48,7 +48,7 @@ svg::Color JSONReader::ReadUnderlayerColor(const std::map<std::string, json::Nod
     if (underlayer_col_.IsString()) {
 		underlayer_color = underlayer_col_.AsString();
 	}
-	if (underlayer_col_.IsArray()) { // не увидел где два раза IsArray ((
+	if (underlayer_col_.IsArray()) { 
 		if (underlayer_col_.AsArray().size() == 3) {
 			underlayer_color = svg::Rgb{
 				uint8_t(underlayer_col_.AsArray()[0].AsInt()),
@@ -68,7 +68,7 @@ svg::Color JSONReader::ReadUnderlayerColor(const std::map<std::string, json::Nod
 }
 
 std::vector<svg::Color> JSONReader::ReadColorPalette(const std::map<std::string, json::Node>& s) const {
-	std::vector<svg::Color> color_palette;
+    std::vector<svg::Color> color_palette;
     auto color_pal_ = s.at("color_palette").AsArray();
 	if (color_pal_.empty()) {
 		color_palette.push_back("none");
@@ -81,7 +81,7 @@ std::vector<svg::Color> JSONReader::ReadColorPalette(const std::map<std::string,
 					uint8_t g = color.AsArray()[1].AsInt();
 					uint8_t b = color.AsArray()[2].AsInt();
 					color_palette.push_back(svg::Rgb{ r, g, b });
-				} else {
+				} else if (color.IsArray() && color.AsArray().size() == 4) {
 				      uint8_t r = color.AsArray()[0].AsInt();
 					  uint8_t g = color.AsArray()[1].AsInt();
 					  uint8_t b = color.AsArray()[2].AsInt();
