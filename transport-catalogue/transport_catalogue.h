@@ -22,6 +22,8 @@ public:
     const Bus* FindBus(const std::string_view bus_name) const;
     const Stop* FindStop(const std::string_view stop_name) const;
     size_t GetDistance(std::string_view stop_from, std::string_view stop_to) const;
+    const std::unordered_set<const Bus*> GetAllBuses() const;
+	const std::unordered_set<const Stop*> GetAllStops() const;
     
 private:
     double CalculateRouteLength(std::string_view bus_info) const;
