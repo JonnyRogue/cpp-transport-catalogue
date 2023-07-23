@@ -5,33 +5,37 @@
 #include "map_renderer.h"
 
 namespace transport_catalogue {
-namespace json {
+
+struct Data {
+    json::Document base_requests;
+    json::Document stat_requests;
+    renderer::RenderSettings render_settings;
+    RoutingSettings routing_settings;
+};
 
 class JSONReader {
 public:
-    JSONReader(TransportCatalogue& catalogue, request::RequestHandler& request_handler_, renderer::MapRenderer& map_renderer);
-    void ReadJSON(std::istream& input);
-	void BuildDataBase();
-	void GenerateAnswer();
-	void PrintAnswer(std::ostream& output);
+    JSONReader(TransportCatalogue& catalogue, renderer::MapRenderer& map_renderer);
+    Data ReadJSON(std::istream& input) const;
+    void BuildDataBase(const Data& data);
+    json::Document GenerateAnswer(const TransportRouter& transport_router, const json::Document& stat_requests) const;
 
 private:
     TransportCatalogue& catalogue_;
-	request::RequestHandler& request_handler_;
-	renderer::MapRenderer& map_renderer_;
-    json::Document base_requests_;
-	json::Document stat_requests_;
-	json::Document answers_;
-    renderer::RenderSettings ReadJsonRenderSettings(const json::Node& settings) const;
-	svg::Color ReadUnderlayerColor(const std::map<std::string, json::Node>& s) const;
-	std::vector<svg::Color> ReadColorPalette(const std::map<std::string, json::Node>& s) const;
+    renderer::MapRenderer& map_renderer_;
+    renderer::RenderSettings render_settings_;
+    svg::Color ReadUnderlayerColor(const std::map<std::string, json::Node>& s) const;
+    std::vector<svg::Color> ReadColorPalette(const std::map<std::string, json::Node>& s) const;
+    renderer::RenderSettings CreateRenderSettings(const json::Node& settings) const;
+    RoutingSettings CreateRoutingSettings(const json::Node& input_node) const;
     void AddNameAndCoordinatesOfStop(const json::Node& node);
-	void AddDistanceBetweenStops(const json::Node& stop_from);
-	void AddJsonBus(const json::Node& node);
-    std::map<std::string, json::Node> GenerateAnswerAboutRoute(const json::Node& request) const;
-	std::map<std::string, json::Node> GenerateAnswerAboutStop(const json::Node& request) const;
-	std::map<std::string, json::Node> GenerateAnswerAboutMap(int id) const;
+    void AddDistanceBetweenStops(const json::Node& stop_from);
+    void AddJsonBus(const json::Node& node);
+    json::Node GenerateAnswerBus(const json::Node& request) const;
+    json::Node GenerateAnswerStop(const json::Node& request) const;
+    json::Node GenerateAnswerMap(const int id) const;
+    json::Node GenerateAnswerRoute(const TransportRouter& router,	const json::Node& request) const;
+    json::Node ConvertEdgeInfo(const TransportRouter& router, const EdgeId edge_id) const;
 };
     
-}//end namespace json
 }//end namespace transport_catalogue
