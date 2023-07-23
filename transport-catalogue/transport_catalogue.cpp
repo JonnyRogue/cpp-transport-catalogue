@@ -89,7 +89,23 @@ size_t TransportCatalogue::CalculateUniqueStops(std::string_view bus) const {
 	}
     return unique_stops.size();
 }
+    
+const std::unordered_set<const Bus*> TransportCatalogue::GetAllBuses() const {
+	std::unordered_set<const Bus*> buses;
+	for (const auto& [_, bus_] : map_all_buses) {
+		buses.insert(bus_);
+	}
+	return buses;
+}
 
+const std::unordered_set<const Stop*> TransportCatalogue::GetAllStops() const {
+	std::unordered_set<const Stop*> stops;
+	for (const auto& [_, stop_] : map_all_stops) {
+		stops.insert(stop_);
+	}
+	return stops;
+}
+    
 const Stop* TransportCatalogue::FindStop(const std::string_view stop_name) const {
     return map_all_stops.count(stop_name) ? map_all_stops.at(stop_name) : nullptr;
 }
