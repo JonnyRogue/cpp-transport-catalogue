@@ -16,6 +16,13 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <variant>
+#include <cstdlib>
+#include <algorithm>
+#include <cstdint>
+#include <iterator>
+#include <stdexcept>
+#include <utility>
+#include <memory>
 
 #include "geo.h"
 
@@ -63,7 +70,7 @@ public:
 	
 struct CompareStop {
 public:
-    bool operator()(const Stop* l, const Stop* r) const;
+	bool operator()(const Stop* l, const Stop* r) const;
 };
     
 }  //transport_catalogue
