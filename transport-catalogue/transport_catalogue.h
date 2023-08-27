@@ -1,4 +1,6 @@
 #pragma once
+
+#include "geo.h"
 #include "domain.h"
 
 namespace transport_catalogue {
@@ -14,29 +16,31 @@ private:
 class TransportCatalogue {
 
 public:  
-    void AddStop(const Stop& stop);
-    void AddBus(const Bus& bus);
+    void AddStop(std::string_view stop_name, const double lat, const double lng, const std::vector<std::pair<std::string, double>>& dst_info);
+    void AddBus(const QueryInputBus& query);
     void SetDistance(std::string_view stop_from, std::string_view stop_to, size_t distance);
-    BusQueryInput GetBusInfo(std::string_view bus) const;
-    StopQueryInput GetStopInfo(std::string_view stop_name) const;
-    const Bus* FindBus(const std::string_view bus_name) const;
-    const Stop* FindStop(const std::string_view stop_name) const;
-    size_t GetDistance(std::string_view stop_from, std::string_view stop_to) const;
-    const std::unordered_set<const Bus*> GetAllBuses() const;
-	const std::unordered_set<const Stop*> GetAllStops() const;
+    const std::unordered_map<PairStop, double, DistanceHasher>& GetDistance() const;
+    BusQueryInput GetBusInfo(const Bus& bus) const;
+    std::optional<std::set<std::string>> GetStopInfo(std::string_view query);
+    Bus* FindBus(std::string_view bus_name);
+    Stop* FindStop(const std::string_view stop_name);
+    const std::deque<Bus>& GetAllBuses() const;
+	const std::deque<Stop>& GetAllStops() const;
+    void AddBusForSerializator(std::string bus_name, RouteType type, std::vector<std::string> stop_names);
+    const std::map<std::string_view, const Bus*> GetBuses() const;
+    const std::map<std::string_view, const Stop*> GetStops() const;
+    const std::set<std::string_view>& GetBusesForStop(std::string_view stop) const;
+    double GetCalculateDistance(const Stop* first_route, const Stop* second_route);
     
-private:
-    double CalculateRouteLength(std::string_view bus_info) const;
-    double CalculateGeographicLength(std::string_view bus_info) const;
-    size_t CalculateUniqueStops(std::string_view bus) const;
-
 private: 
+    int id = 0;
+    const std::set<std::string_view> empty_route{};
     std::deque<Stop> stops;
     std::deque<Bus> buses;
-    std::unordered_map<std::string_view, const Stop*> map_all_stops;
-    std::unordered_map<std::string_view, const Bus*> map_all_buses;
-    std::unordered_map<PairStop, int, DistanceHasher> map_distance_to_stop;
-    std::unordered_map<const Stop*, std::unordered_set<const Bus*>> stop_to_bus_map; 
+    std::unordered_map<std::string_view, Stop*> map_all_stops;
+    std::unordered_map<std::string_view, Bus*> map_all_buses;
+    std::unordered_map<PairStop, double, DistanceHasher> map_distance_to_stop;
+    std::unordered_map<std::string_view, std::set<std::string_view>> stop_to_bus_map; 
     
 }; //TransportCatalogue
 }  //transport_catalogue
