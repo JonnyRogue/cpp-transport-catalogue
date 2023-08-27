@@ -1,10 +1,9 @@
 #pragma once
  
 #include "json.h"
- 
+
 namespace transport_catalogue {
 namespace json {
-namespace builder {
  
 class Builder {
 private:
@@ -81,6 +80,5 @@ void Builder::StartContainer(Container container) {
       }
 }
  
-}//end namespace builder
 }//end namespace json
 }//end namespace transport_catalogue
