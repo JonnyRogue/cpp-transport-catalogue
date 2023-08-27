@@ -2,7 +2,6 @@
 
 namespace transport_catalogue {
 namespace json {
-namespace builder {
 
 Builder::BaseContext::BaseContext(Builder &builder) : builder_(builder) {}
 
@@ -107,6 +106,5 @@ Builder::~Builder() = default;
     return (nodes_stack_.empty() || (!nodes_stack_.back()->IsNull() && !nodes_stack_.back()->IsArray()));
 }
 
-}//end namespace builder
 }//end namespace json
 }//end namespace transport_catalogue
