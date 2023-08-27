@@ -1,3 +1,4 @@
+#define _USE_MATH_DEFINES
 #include "svg.h"
 
 namespace transport_catalogue {
