@@ -301,8 +301,6 @@ void PrintNode(const Node& node, const PrintContext& ctx) {
 }
 }
     
-Node::Node(Value value) : std::variant<std::nullptr_t, Array, Dict, bool, int, double, std::string>(value) {}
-    
 int Node::AsInt() const {
     if (!IsInt()) {
         throw std::logic_error("Not int"s);
@@ -387,16 +385,6 @@ bool Node::operator==(const Node& other) const {
     
 Node::Value& Node::GetNoConstValue() {
     return *this;
-}
-
-Document::Document() {
-    root_ = std::nullptr_t{};
-}
-
-Document::Document(Node root): root_(move(root)) {}
-
-const Node& Document::GetRoot() const {
-    return root_;
 }
 
 Document Load(istream& input) {
