@@ -2,40 +2,58 @@
 
 #include "json.h"
 #include "request_handler.h"
+#include "json_builder.h"
+#include "domain.h"
+#include "transport_router.h"
+#include "transport_catalogue.h"
 #include "map_renderer.h"
+#include "serialization.h"
 
-namespace transport_catalogue {
+namespace transport_catalogue{
 
-struct Data {
-    json::Document base_requests;
-    json::Document stat_requests;
-    renderer::RenderSettings render_settings;
-    RoutingSettings routing_settings;
-};
+inline json::Node GetErrorNode(int id);
 
-class JSONReader {
+svg::Color ParseColor(const json::Node& node);
+
+class JSONReader{
 public:
-    JSONReader(TransportCatalogue& catalogue, renderer::MapRenderer& map_renderer);
-    Data ReadJSON(std::istream& input) const;
-    void BuildDataBase(const Data& data);
-    json::Document GenerateAnswer(const TransportRouter& transport_router, const json::Document& stat_requests) const;
+    JSONReader(TransportCatalogue& catalog, TransportRouter& router) : transport_catalogue_(catalog),  router_(router){};
+
+    void MakeBase(std::istream& input);
+    void ReadRawJson(std::istream& input, std::vector<json::Document>& document);
+    void ParseBase();
+    void AddStop(const json::Array& arr);
+    void AddBus(const json::Array& arr);
+    void AddToCatalog(json::Node node);
+    void AddRoutingSettings(const json::Node &root_);
+    void ReadRenderSettings(json::Node node);
+    void Request(std::istream& input);
+    void ParseSerializeSettings();
+    void ParseStatRequest();
+    void FillMap(int id);
+    void FillOutput(json::Node node);
+    void FillStop(const std::string& name, int id);
+    void FillBus(Bus* bus, int id);
+    void FillRout(int id, const json::Dict& request_fields);
+    void ReadSerializationSettings(const json::Node &node);
+    void OutputInfo(std::ostream& out);
+    renderer::RenderSettings GetParsedRenderSettings();
+    void SetRenderSettings(const renderer::RenderSettings& settings) ;
+    serializator::SerializatorSettings GetSerializatorSettings();
+    RoutingSettings GetRoutingSettings();
 
 private:
-    TransportCatalogue& catalogue_;
-    renderer::MapRenderer& map_renderer_;
+    TransportCatalogue& transport_catalogue_;
+    TransportRouter& router_;
+    std::vector<json::Document> base_document_;
+    std::vector<json::Document> request_document_;
+    std::vector<json::Node> request_to_output_;
+    json::Dict settings_;
     renderer::RenderSettings render_settings_;
-    svg::Color ReadUnderlayerColor(const std::map<std::string, json::Node>& s) const;
-    std::vector<svg::Color> ReadColorPalette(const std::map<std::string, json::Node>& s) const;
-    renderer::RenderSettings CreateRenderSettings(const json::Node& settings) const;
-    RoutingSettings CreateRoutingSettings(const json::Node& input_node) const;
-    void AddNameAndCoordinatesOfStop(const json::Node& node);
-    void AddDistanceBetweenStops(const json::Node& stop_from);
-    void AddJsonBus(const json::Node& node);
-    json::Node GenerateAnswerBus(const json::Node& request) const;
-    json::Node GenerateAnswerStop(const json::Node& request) const;
-    json::Node GenerateAnswerMap(const int id) const;
-    json::Node GenerateAnswerRoute(const TransportRouter& router,	const json::Node& request) const;
-    json::Node ConvertEdgeInfo(const TransportRouter& router, const EdgeId edge_id) const;
-};
+    serializator::SerializatorSettings serializator_settings_;
+    int bus_wait_time_;
+    double bus_velocity_;
     
-}//end namespace transport_catalogue
+};
+
+} //namespace transport_catalogue
