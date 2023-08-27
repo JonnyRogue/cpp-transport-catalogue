@@ -1,4 +1,4 @@
-#define _USE_MATH_DEFINES
+/*#define _USE_MATH_DEFINES
 #include "geo.h"
  
 #include <cmath>
@@ -19,3 +19,4 @@ double ComputeDistance(Coordinates from, Coordinates to) {
     
 }//end namespace geo
 }//end namespace transport_catalogue
+*/
