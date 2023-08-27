@@ -23,10 +23,14 @@
 #include <stdexcept>
 #include <utility>
 #include <memory>
+#include <filesystem>
+#include <fstream>
 
 #include "geo.h"
 
 namespace transport_catalogue {
+    
+double KmDividedOnTime (double speed);
     
 enum class RouteType { 
     CIRCLE, 
@@ -36,41 +40,52 @@ enum class RouteType {
 struct Stop {
     std::string name;
     geo::Coordinates coord;
+    int id;
 };
 
 using PairStop = std::pair<const Stop*, const Stop*>;
-using DeqStop = std::deque<const Stop*>;
+using DeqStop = std::deque< Stop*>;
 using StringVec = std::vector<std::string>;
 
 struct Bus {
-    RouteType type;
     std::string name_bus;
     DeqStop stop_names;
+    RouteType type;
 };
 
 struct BusQueryInput {
-    bool bus_not_found_ = false;
     std::string number;
-    size_t stops_count = 0;
-    size_t unique_stops_count = 0;
+    int stops_count = 0;
+    int unique_stops_count = 0;
     double route_length = 0.0;
     double curvature = 0.0;
 };
 
-struct StopQueryInput {
-    bool not_found_ = false;
+struct QueryInputBus {
     std::string name;
-    std::unordered_set<const Bus*> buses_name;
+    RouteType type;
+    std::vector<std::string> stops_list;
 };
-    
-struct CompareBus {
-public:
-	bool operator()(const Bus* l, const Bus* r) const;
-};
-	
-struct CompareStop {
-public:
-	bool operator()(const Stop* l, const Stop* r) const;
+
+struct RouteStatistic{
+
+    struct ItemsWait {
+        std::string type;
+        double time = 0;
+        std::string stop_name;
+    };
+
+    struct ItemsBus {
+        std::string type;
+        double time = 0;
+        size_t span_count = 0;
+        std::string bus;
+    };
+
+    using VariantItem = std::variant<ItemsBus, ItemsWait>;
+
+    double total_time = 0;
+    std::vector<VariantItem> items;
 };
     
 }  //transport_catalogue
