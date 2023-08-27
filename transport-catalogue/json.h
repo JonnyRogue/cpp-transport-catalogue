@@ -20,7 +20,9 @@ class Node final
 public:
     using variant::variant;
     using Value = variant;
-    Node(Value value);
+    Node(Value value) :
+        Value(std::move(value))
+    {;}
             
     int AsInt() const;
     bool AsBool() const;
@@ -48,9 +50,10 @@ inline bool operator!=(const Node& lhs, const Node& rhs) {
 
 class Document {
 public:
-    explicit Document();
-    explicit Document(Node root);
-    const Node& GetRoot() const;
+    explicit Document(Node root) : root_(std::move(root)) {}
+    const Node& GetRoot() const {
+        return root_;
+    }
 private:
     Node root_;
 };
