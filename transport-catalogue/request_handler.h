@@ -1,4 +1,4 @@
-#pragma once
+/*#pragma once
 #include "map_renderer.h"
 #include "transport_router.h"
 
@@ -10,7 +10,7 @@ public:
 
     std::optional<BusQueryInput> GetBusStat(const std::string_view& bus_name) const;
 
-    const std::unordered_set<const Bus* > GetBusesByStop(const std::string_view& stop_name) const;
+  //  const std::unordered_set<const Bus* > GetBusesByStop(const std::string_view& stop_name) const;
     
     const std::deque<const Stop*>& GetStopsByBus(const std::string_view bus_name) const;
 
@@ -28,4 +28,4 @@ private:
     const TransportRouter& router_;
 };
 
-} //namespace transport_catalogue
+} //namespace transport_catalogue*/
